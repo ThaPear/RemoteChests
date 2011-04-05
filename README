@@ -1,0 +1,34 @@
+This plugin allows you to access your chests remotely via command or linking.
+
+Chest linking:
+To link a chest block to a remote chest, place a sign above it with [rc] NAME on it.
+It will automatically search for an existing remote chest with that name and link to that.
+If the target chest does not exist, it will be created.
+Any items in the original chest block will be transferred to the remote chest. (When linking and when creating)
+If there are so many items in the chest block that they do not fit into the remote chest, they will be dropped.
+
+Commands, [arg] = Optional argument:
+/rchelp - Show commands in-game
+/rcopen <name> - Open aremote chest
+/rccreate <name> - Create a remote chest
+/rcremove <name> - Remove a remote chest (ALL CONTENTS WILL BE LOST)
+/rcrename <oldname> <newname> - Rename a remote chest, items will be copied to target chest.
+/rcsort <name> - Sort the contents of a remote chest by item id.
+/rcstack <name> - Stack all stackable items to 64
+/rclist [page] - Lists all remote chests. If more than 18 exist, you can specify page to see further down the list.
+
+/rcmerge <chest1name> <chest2name> [newname] [flags]
+Merge 2 chests.
+When no new name is specified, <chest1name> is used
+Flags:
+I - Ignore overfilled chests, items will be lost
+SWF - Auto-stack contents if target chest becomes overfilled
+O - Auto-overwrite target chest, needed if newname is already a chest and not chest1/chest2
+AM - Auto-merge with target chest, same context as O, but merges all 3 chests (auto-specifies SWF with auto-merge).
+S - Auto-stack contents before merging
+SS - Auto-stack contents before & after merging
+
+Changelog:
+Version 1.0:
+- Initial Upload.
+
