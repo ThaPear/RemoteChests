@@ -1,0 +1,40 @@
+name: Remote Chests
+main: rc.rc.ThaPear.RemoteChests.rcPlugin
+version: 1.0
+commands:
+  rcopen:
+    description: Open a chest remotely
+    usage: /rcopen
+  rcopenchest:
+    description: Open a chest remotely
+    usage: /rcopenchest
+  rccreate:
+    description: Create a new chest
+    usage: /rccreate <name>
+  rccreatechest:
+    description: Create a new chest
+    usage: /rccreatechest <name>
+  rcremove:
+    description: Remove a chest
+    usage: /rcremove <name>
+  rcremovechest:
+    description: Remove a chest
+    usage: /rcremovechest <name>
+  rcrename:
+    description: Rename a chest
+    usage: /rcrename <oldname> <newname>
+  rcmerge:
+    description: Merge the contents of 2 chests
+    usage: /rcmerge <chest1name> <chest2name> [<newname>] [<flags>]
+  rcstack:
+    description: Stack the contents of the chest
+    usage: /rcstack <name>
+  rcsort:
+    description: Sort the contents of the chest
+    usage: /rcsort <name>
+  rclist:
+    description: List all existing chests
+    usage: /rclist
+  rchelp:
+    description: Get all possible commands
+    usage: /rchelp
