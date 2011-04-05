@@ -28,7 +28,20 @@ AM - Auto-merge with target chest, same context as O, but merges all 3 chests (a
 S - Auto-stack contents before merging
 SS - Auto-stack contents before & after merging
 
+Permissions:
+Command = "permission.node"
+/rcopen = "rc.open"
+/rccreate = "rc.create"
+/rcremove = "rc.remove"
+/rcrename = "rc.rename"
+/rcsort = "rc.sort"
+/rcstack = "rc.stack"
+/rcmerge = "rc.merge"
+/rclist =  "rc.list"
+
 Changelog:
+Version 1.1:
+- Added Permissions.
 Version 1.0:
 - Initial Upload.
 
