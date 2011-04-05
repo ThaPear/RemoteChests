@@ -29,6 +29,7 @@ S - Auto-stack contents before merging
 SS - Auto-stack contents before & after merging
 
 Permissions:
+Open Linked chests = "rc.linkedopen"
 Command = "permission.node"
 /rcopen = "rc.open"
 /rccreate = "rc.create"

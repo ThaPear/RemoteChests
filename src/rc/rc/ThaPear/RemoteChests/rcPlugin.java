@@ -34,6 +34,7 @@ import org.bukkit.plugin.Plugin;
 
 public class rcPlugin extends JavaPlugin
 {
+	static String rclinkopenPerm = "rc.linkedopen";
 	private static String rcopenPerm = "rc.open";
 	private static String rccreatePerm = "rc.create";
 	private static String rcremovePerm = "rc.remove";
@@ -42,7 +43,7 @@ public class rcPlugin extends JavaPlugin
 	private static String rcstackPerm = "rc.stack";
 	private static String rcmergePerm = "rc.merge";
 	private static String rclistPerm = "rc.list";
-	private static boolean permissionsOn = false;
+	static boolean permissionsOn = false;
 	public static final Logger log = Logger.getLogger("Minecraft");
 	public static PermissionHandler Permissions;
 	

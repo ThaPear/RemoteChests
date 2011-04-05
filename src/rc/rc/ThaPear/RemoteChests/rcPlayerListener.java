@@ -1,5 +1,6 @@
 package rc.rc.ThaPear.RemoteChests;
 
+import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
@@ -27,7 +28,9 @@ public class rcPlayerListener extends PlayerListener
 			String signName = plugin.getSignName( ((Sign) block.getState()).getLines() );
 			if(!signName.equals(""))
 			{
-				if(!plugin.openChest( event.getPlayer(), signName, true))
+				if(rcPlugin.permissionsOn && !rcPlugin.Permissions.has(event.getPlayer(), rcPlugin.rclinkopenPerm))
+					event.getPlayer().sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "You do not have permission to open linked chests.");
+				else if(!plugin.openChest( event.getPlayer(), signName, true))
 					plugin.createChest(event.getPlayer(), signName);
 				event.setCancelled(true);
 			}
