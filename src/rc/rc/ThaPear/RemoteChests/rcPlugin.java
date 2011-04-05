@@ -26,12 +26,25 @@ import rc.rc.ThaPear.RemoteChests.rcBlockListener;
 import rc.rc.ThaPear.RemoteChests.rcPlayerListener;
 import rc.rc.ThaPear.RemoteChests.rcChest;
 import rc.rc.ThaPear.RemoteChests.rcFile;
-
+// Permissions
+import com.nijiko.permissions.PermissionHandler;
+import com.nijikokun.bukkit.Permissions.Permissions;
+import org.bukkit.plugin.Plugin;
 
 
 public class rcPlugin extends JavaPlugin
 {
+	private static String rcopenPerm = "rc.open";
+	private static String rccreatePerm = "rc.create";
+	private static String rcremovePerm = "rc.remove";
+	private static String rcrenamePerm = "rc.rename";
+	private static String rcsortPerm = "rc.sort";
+	private static String rcstackPerm = "rc.stack";
+	private static String rcmergePerm = "rc.merge";
+	private static String rclistPerm = "rc.list";
+	private static boolean permissionsOn = false;
 	public static final Logger log = Logger.getLogger("Minecraft");
+	public static PermissionHandler Permissions;
 	
 	public static String messagePrefix = "[RemoteChests] ";
 	@SuppressWarnings("unused") // Ignore the warning about this variable not being used, as it is used when debugging is uncommented.
@@ -78,6 +91,9 @@ public class rcPlugin extends JavaPlugin
 	
 		chests = fileIO.loadChests();
 		
+		// Permissions support
+		setupPermissions();
+		
 		PluginDescriptionFile pdfFile = this.getDescription();
 		System.out.println( messagePrefix + pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!" );
 	}
@@ -117,17 +133,26 @@ public class rcPlugin extends JavaPlugin
 
 		if ( cmd.getName().equalsIgnoreCase("rcopen") || cmd.getName().equalsIgnoreCase("rcopenchest") )
 		{
-			openChest(player, args[0]);
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcopenPerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else
+				openChest(player, args[0]);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rccreate") || cmd.getName().equalsIgnoreCase("rccreatechest") )
 		{
-			createChest(player, args[0]);
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rccreatePerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else
+				createChest(player, args[0]);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rcremove") )
 		{
-			removeChest(player, args[0]);
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcremovePerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else
+				removeChest(player, args[0]);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rcmerge") )
@@ -135,29 +160,42 @@ public class rcPlugin extends JavaPlugin
 			if(args[0].contains("?"))
 				dispMergeHelp(player);
 			else
-				mergeChests(player, args);
+				if(permissionsOn && !rcPlugin.Permissions.has(player, rcmergePerm))
+					player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+				else
+					mergeChests(player, args);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rcrename") )
 		{
-			renameChest(player, args);
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcrenamePerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else 
+				renameChest(player, args);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rcstack") )
 		{
-			if(stackChest(player, args[0]))
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcstackPerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else if(stackChest(player, args[0]))
 				player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + args[0] + "\" stacked succesfully.");
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rcsort") )
 		{
-			if(sortChest(player, args[0]))
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcsortPerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else if(sortChest(player, args[0]))
 				player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + args[0] + "\" sorted succesfully.");
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rclist") )
 		{
-			listChests(player, args);
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rclistPerm))
+				player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission to use " + cmd.getName() + ".");
+			else
+				listChests(player, args);
 			return true;
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rchelp"))
@@ -169,6 +207,7 @@ public class rcPlugin extends JavaPlugin
 			player.sendMessage("/rccreate <chestname> - Create a virtual chest manually");
 			player.sendMessage("/rcremove <chest1name> - Remove specified chest");
 			player.sendMessage("/rcrename <oldname> <newname> - Rename specified chest");
+			player.sendMessage("/rcstack <chest1name> - Stack the contents of a chest");
 			player.sendMessage("/rcsort <chest1name> - Sort the contents of a chest");
 			player.sendMessage("/rclist - List all existing chests");
 			player.sendMessage("/rcmerge <chest1name> <chest2name> [<newname>] [<flags>]");
@@ -734,7 +773,7 @@ public class rcPlugin extends JavaPlugin
 	public void debugPrint(String msg)
 	{
 //		getServer().broadcastMessage(msg);
-//		log.log(java.util.logging.Level.INFO, debugPrefix + msg);
+//		log.info(debugPrefix + msg);
 	}
 	
 	/**
@@ -807,5 +846,20 @@ public class rcPlugin extends JavaPlugin
 			sign.update();
 		}
 		return amount;
+	}
+	/**
+	 * Set up the permissions system
+	 */
+	private void setupPermissions()
+	{
+		Plugin perm = this.getServer().getPluginManager().getPlugin("Permissions");
+		if (rcPlugin.Permissions == null)
+			if (perm != null)
+			{
+				rcPlugin.Permissions = ((Permissions)perm).getHandler();
+				permissionsOn = true;
+			}
+			else
+				log.info(messagePrefix + "Permissions not detected, everyone can use chests.");
 	}
 }
