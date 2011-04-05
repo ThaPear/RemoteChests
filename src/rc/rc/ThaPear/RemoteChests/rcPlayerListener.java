@@ -29,7 +29,7 @@ public class rcPlayerListener extends PlayerListener
 			if(!signName.equals(""))
 			{
 				if(rcPlugin.permissionsOn && !rcPlugin.Permissions.has(event.getPlayer(), rcPlugin.rclinkopenPerm))
-					event.getPlayer().sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "You do not have permission to open linked chests.");
+					event.getPlayer().sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "You do not have permission to open this.");
 				else if(!plugin.openChest( event.getPlayer(), signName, true))
 					plugin.createChest(event.getPlayer(), signName);
 				event.setCancelled(true);

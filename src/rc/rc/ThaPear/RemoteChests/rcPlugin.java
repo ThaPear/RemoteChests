@@ -34,7 +34,7 @@ import org.bukkit.plugin.Plugin;
 
 public class rcPlugin extends JavaPlugin
 {
-	static String rclinkopenPerm = "rc.linkedopen";
+	public static String rclinkopenPerm = "rc.linkedopen";
 	private static String rcopenPerm = "rc.open";
 	private static String rccreatePerm = "rc.create";
 	private static String rcremovePerm = "rc.remove";
