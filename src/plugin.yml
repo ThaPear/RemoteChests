@@ -35,6 +35,15 @@ commands:
   rclist:
     description: List all existing chests
     usage: /rclist
+  rcallow:
+    description: Allow specified player to open specified chest
+    usage: /rcallow <playername> <chestname>
+  rcdisallow:
+    description: Disallow specified player to open specified chest
+    usage: /rcdisallow <playername> <chestname>
+  rcsetowner:
+    description: Set specified player as owner of specified chest
+    usage: /rcsetowner <playername> <chestname>
   rchelp:
     description: Get all possible commands
     usage: /rchelp

@@ -13,7 +13,7 @@ public class rcWorldListener extends WorldListener
 	@Override
 	public void onWorldSave(WorldSaveEvent event)
 	{
-		plugin.saveChests();
+		plugin.saveStuff();
 	}
 	
 }
