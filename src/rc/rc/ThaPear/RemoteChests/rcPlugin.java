@@ -30,10 +30,15 @@ import rc.rc.ThaPear.RemoteChests.rcFile;
 import com.nijiko.permissions.PermissionHandler;
 import com.nijikokun.bukkit.Permissions.Permissions;
 import org.bukkit.plugin.Plugin;
-
+// iConomy
+import com.nijiko.coelho.iConomy.iConomy;
+import com.nijiko.coelho.iConomy.system.Account;
 
 public class rcPlugin extends JavaPlugin
 {
+	/**
+	 * Permissions stuff
+	 */
 	public static String rclinkopenPerm = "rc.linkedopen";
 	private static String rcopenPerm = "rc.open";
 	private static String rccreatePerm = "rc.create";
@@ -44,9 +49,17 @@ public class rcPlugin extends JavaPlugin
 	private static String rcmergePerm = "rc.merge";
 	private static String rclistPerm = "rc.list";
 	static boolean permissionsOn = false;
-	public static final Logger log = Logger.getLogger("Minecraft");
 	public static PermissionHandler Permissions;
 	
+	/**
+	 * iConomy stuff
+	 */
+	static boolean iConomyOn = false;
+	private static iConomy iConomyHandle = null;
+	static int iConChestCreatePrice = 0;
+	
+	
+	public static final Logger log = Logger.getLogger("Minecraft");
 	public static String messagePrefix = "[RemoteChests] ";
 	@SuppressWarnings("unused") // Ignore the warning about this variable not being used, as it is used when debugging is uncommented.
 	private static String debugPrefix = "[RemoteChests][Debug] ";
@@ -94,6 +107,12 @@ public class rcPlugin extends JavaPlugin
 		
 		// Permissions support
 		setupPermissions();
+		// iConomy support
+		setupiConomy();
+		if(iConomyOn)
+		{
+			fileIO.loadIConomy();
+		}
 		
 		PluginDescriptionFile pdfFile = this.getDescription();
 		System.out.println( messagePrefix + pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!" );
@@ -201,20 +220,41 @@ public class rcPlugin extends JavaPlugin
 		}
 		else if ( cmd.getName().equalsIgnoreCase("rchelp"))
 		{
+			ChatColor clr = ChatColor.WHITE;
 			player.sendMessage(ChatColor.YELLOW + messagePrefix + "---------------------------------------");
 			
-			player.sendMessage(ChatColor.GREEN + "Possible commands:"); // the - all end up at the same location
-			player.sendMessage("/rcopen <chestname> - Open a chest remotely");
-			player.sendMessage("/rccreate <chestname> - Create a virtual chest manually");
-			player.sendMessage("/rcremove <chest1name> - Remove specified chest");
-			player.sendMessage("/rcrename <oldname> <newname> - Rename specified chest");
-			player.sendMessage("/rcstack <chest1name> - Stack the contents of a chest");
-			player.sendMessage("/rcsort <chest1name> - Sort the contents of a chest");
-			player.sendMessage("/rclist - List all existing chests");
-			player.sendMessage("/rcmerge <chest1name> <chest2name> [<newname>] [<flags>]");
+			player.sendMessage(ChatColor.GREEN + "Possible commands:");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcopenPerm))	clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcopen <chestname> - Open a chest remotely");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rccreatePerm))clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rccreate <chestname> - Create a virtual chest manually");
+			if(iConomyOn)
+				player.sendMessage(ChatColor.RED + "This will cost you " + iConomy.getBank().format(iConChestCreatePrice));
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcremovePerm))clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcremove <chest1name> - Remove specified chest");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcrenamePerm))clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcrename <oldname> <newname> - Rename specified chest");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcstackPerm))	clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcstack <chest1name> - Stack the contents of a chest");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcsortPerm))	clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcsort <chest1name> - Sort the contents of a chest");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rclistPerm))	clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rclist - List all existing chests");
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rcmergePerm))	clr = ChatColor.RED;
+			else																clr = ChatColor.WHITE;
+			player.sendMessage(clr + "/rcmerge <chest1name> <chest2name> [<newname>] [<flags>]");
 			player.sendMessage("Merge 2 chests, Type /rcmerge ? for more info");
-			
-			player.sendMessage(ChatColor.GREEN + "Chest linking:");
+
+			if(permissionsOn && !rcPlugin.Permissions.has(player, rclinkopenPerm))	clr = ChatColor.RED;
+			else																	clr = ChatColor.GREEN;
+			player.sendMessage(clr + "Chest linking:");
 			player.sendMessage("Place a sign above a chest to link it to a virtual chest");
 			player.sendMessage("Specify its target with [rc] <chestname> on any of the lines");
 			player.sendMessage("Or with [rc] on any of the lines, and <chestname> on the next");
@@ -633,23 +673,40 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Creates a chest with the specified name, used for the rcCreate command.
 	 */
-	public void createChest(Player player, String name)
+	public boolean createChest(Player player, String name)
 	{
 		debugPrint("Creating Chest");
 		if(name.equals(""))
+		{
+			player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a chest name");
+			return false;
+		}
+		if(chests.containsKey(name))
+		{
+			player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name + "\" already exists.");
+			return false;
+		}
+		if(iConomyOn)
+		{
+			Account iConAccount = iConomy.getBank().getAccount(player.getName());
+			if(!(iConAccount.getBalance() >= iConChestCreatePrice))
 			{
-				player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a chest name");
-				return;
-			}
-			if(chests.containsKey(name))
-			{
-				player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name + "\" already exists.");
-				return;
+				player.sendMessage(messagePrefix + ChatColor.RED + "Your bank balance is too low to create a chest");
+				player.sendMessage(messagePrefix + ChatColor.RED + "You need " + iConomy.getBank().format(iConChestCreatePrice) + ", you have " + iConomy.getBank().format(iConAccount.getBalance()));
+				return false;
 			}
 			else
-				chests.put(name, new InventoryLargeChest(name, new rcChest(), new rcChest()));
+			{
+				iConAccount.subtract(iConChestCreatePrice);
+				player.sendMessage(messagePrefix + ChatColor.GREEN + "Subtracted " + iConomy.getBank().format(iConChestCreatePrice) + " from your account");
+			}
+		}
+		// Create the chest
+		chests.put(name, new InventoryLargeChest(name, new rcChest(), new rcChest()));
+		
 		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + name + "\" succesfully created.");
-			openChest(player, name);
+		openChest(player, name);
+		return true;
 	}
 	/**
 	 * Adds a chest at the specified location, used when placing signs.
@@ -662,9 +719,15 @@ public class rcPlugin extends JavaPlugin
 		if(!(block.getState() instanceof Chest))
 		{
 			player.sendMessage(messagePrefix + ChatColor.RED + "Sign not placed above chest, try again.");
-			if(location.getBlock() instanceof Sign)
+			if(location.getBlock().getState() instanceof Sign)
+			{
+				Sign sign = (Sign)location.getBlock().getState();
+				String error = "ERROR";
 				for(int i = 0; i < 4; i++)
-					((Sign)location.getBlock()).setLine(i, "ERROR");
+					sign.setLine(i, error);
+				sign.update();
+				removeSign(sign);
+			}
 			return;
 		}
 		if(chests.containsKey(name))
@@ -673,12 +736,10 @@ public class rcPlugin extends JavaPlugin
 			player.sendMessage(messagePrefix + ChatColor.GREEN + "Linked to chest \"" + name + "\".");
 			return;
 		}
-		InventoryLargeChest lrgchest = new InventoryLargeChest(name, new rcChest(), new rcChest());
-		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + name + "\" succesfully added.");
-		
-		chests.put(name, lrgchest);
-		
-		transferItems((Chest)block.getState(), lrgchest);
+		if(createChest(player, name))
+		{
+			transferItems((Chest)block.getState(), chests.get(name));
+		}
 	}
 	/**
 	 * Transfers the items from a chest to a virtual chest.
@@ -776,12 +837,12 @@ public class rcPlugin extends JavaPlugin
 //		getServer().broadcastMessage(msg);
 //		log.info(debugPrefix + msg);
 	}
-	
+
 	/**
 	 * Add a sign to the list.
 	 */
 	public void addSign(Sign sign)
-	{	signs.add(sign);	System.out.println("Added sign " + sign.toString());	}
+	{	signs.add(sign);	}
 	/**
 	 * Remove a sign from the list.
 	 */
@@ -791,7 +852,6 @@ public class rcPlugin extends JavaPlugin
 		{
 			if(!(obj instanceof Sign))
 			{
-				System.out.println("AAAAAAAAAAAAAA, invalid sign in signs");
 				continue;
 			}
 			Sign sign = (Sign) obj;
@@ -800,7 +860,6 @@ public class rcPlugin extends JavaPlugin
 					sign.getBlock().getLocation().getBlockZ() == a_sign.getBlock().getLocation().getBlockZ())
 			{
 				signs.remove(sign);
-				System.out.println("Removed sign " + sign.toString());
 			}
 		}
 	}
@@ -814,7 +873,6 @@ public class rcPlugin extends JavaPlugin
 		{
 			if(!(obj instanceof Sign))
 			{
-				System.out.println("AAAAAAAAAAAAAA, invalid sign in signs");
 				continue;
 			}
 			Sign sign = (Sign)obj;
@@ -857,10 +915,27 @@ public class rcPlugin extends JavaPlugin
 		if (rcPlugin.Permissions == null)
 			if (perm != null)
 			{
+				log.info(messagePrefix + "Permissions enabled");
 				rcPlugin.Permissions = ((Permissions)perm).getHandler();
 				permissionsOn = true;
 			}
 			else
-				log.info(messagePrefix + "Permissions not detected, everyone can use chests.");
+				log.info(messagePrefix + "Permissions not found, everyone can use chests");
+	}
+	/**
+	 * Set up the iConomy system
+	 */
+	private void setupiConomy()
+	{
+		Plugin iCon = this.getServer().getPluginManager().getPlugin("iConomy");
+		if (rcPlugin.iConomyHandle == null)
+			if (iCon != null)
+			{
+				log.info(messagePrefix + "iConomy enabled");
+				rcPlugin.iConomyHandle = ((iConomy)iCon);
+				iConomyOn = true;
+			}
+			else
+				log.info(messagePrefix + "iConomy not found");
 	}
 }

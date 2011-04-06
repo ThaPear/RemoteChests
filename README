@@ -40,7 +40,13 @@ Command = "permission.node"
 /rcmerge = "rc.merge"
 /rclist =  "rc.list"
 
+iConomy:
+Run the plugin once, it will generate iConomy.txt (if iConomy is installed)
+In there you can change the price for creating a chest.
+
 Changelog:
+Version 1.2:
+- Added iConomy.
 Version 1.1:
 - Added Permissions.
 Version 1.0:

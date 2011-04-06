@@ -22,7 +22,82 @@ public class rcFile
 	
 	public static String baseDir = "plugins/RemoteChests/";
     
-	static File ChestFile = new File(baseDir + "chests.txt");	
+	static File ChestFile = new File(baseDir + "chests.txt");
+	static File iConomyFile = new File(baseDir + "iconomy.txt");
+	static File iConomyFileBackup = new File(baseDir + "iconomybackup.txt");
+	
+	public void loadIConomy()
+	{
+		// Make sure the folder exists
+		new File(baseDir).mkdir();
+
+		if (!iConomyFile.exists()) // Check if the file exists
+		{ // If it doesn't, try to create it.
+			try
+			{
+				iConomyFile.createNewFile();
+				printDefaultIConomyValues();
+			}
+			// If it fails, print why.
+			catch (IOException ex)	{	ex.printStackTrace();		}
+			// No need to try to read chests from an empty file, so return empty hashmap.
+			System.out.println(rcPlugin.messagePrefix + "iconomy.txt not found, created it." );
+			return;
+		}
+		try
+		{
+			ArrayList<String> listLines = new ArrayList<String>();
+			FileReader readFile = new FileReader(iConomyFile);
+			BufferedReader readBuffer = new BufferedReader(readFile);
+			String line = "";
+			while (line != null) {
+				line = readBuffer.readLine();
+				listLines.add(line);
+			}
+			String[] lines = (String[])listLines.toArray(new String[0]);
+			if(lines.length < 2 || !lines[0].contains(":"))
+			{
+				System.out.println(rcPlugin.messagePrefix + "iconomy.txt corrupted, regenerating" );
+				iConomyFile.renameTo(iConomyFileBackup);
+				
+				iConomyFile.createNewFile();
+				printDefaultIConomyValues();
+				
+				return;
+			}
+			rcPlugin.iConChestCreatePrice = Integer.parseInt(lines[0].split(":")[1]);
+		}
+		catch (IOException ex)
+		{
+			System.out.println(rcPlugin.messagePrefix + "Could not read iconomy.txt" );
+		}
+	}
+	
+	@SuppressWarnings({ "unused" })
+	private void printDefaultIConomyValues()
+	{
+		FileOutputStream outStream = null;
+		PrintStream printStream = null;
+		try
+		{
+			outStream = new FileOutputStream(iConomyFile, true);
+			printStream = new PrintStream(outStream, true);
+		}
+		catch (IOException ex)
+		{
+			if (printStream != null) printStream.close();
+			try						{	if (outStream != null) outStream.close();	}
+			catch (IOException ex2)	{}
+			System.out.println(rcPlugin.messagePrefix + "Could not save default iConomy values.");
+			return;
+		}
+
+		printStream.println("chestcreateprice:0");
+		
+		try	{	outStream.close();	} catch (IOException ex) {}
+		printStream.close();
+	}
+	
 	
 	public HashMap<String, InventoryLargeChest> loadChests()
 	{
@@ -42,9 +117,7 @@ public class rcFile
 			}
 	
 			ArrayList<String> listLines = new ArrayList<String>();
-			FileReader readFile = null;
-	
-			readFile = new FileReader(ChestFile);
+			FileReader readFile = new FileReader(ChestFile);
 			BufferedReader readBuffer = new BufferedReader(readFile);
 			String line = "";
 			while (line != null) {
@@ -128,6 +201,8 @@ public class rcFile
 			if (printStream != null) printStream.close();
 			try						{	if (outStream != null) outStream.close();	}
 			catch (IOException ex2)	{}
+			System.out.println(rcPlugin.messagePrefix + "Could not save chests.");
+			return;
 		}
 		
 		int numChestsSaved = 0;
