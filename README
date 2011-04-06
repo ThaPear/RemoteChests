@@ -41,7 +41,7 @@ Command = "permission.node"
 /rclist =  "rc.list"
 
 iConomy:
-Run the plugin once, it will generate iConomy.txt (if iConomy is installed)
+Run the plugin once, it will generate iconomy.txt (if iConomy is installed)
 In there you can change the price for creating a chest.
 
 Changelog:
