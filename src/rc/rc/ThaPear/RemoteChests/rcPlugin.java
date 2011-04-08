@@ -39,8 +39,14 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Permissions stuff
 	 */
+	static boolean permissionsOn = false;
+	public  static PermissionHandler Permissions;
 	private static String rcadminPerm = "rc.admin";
-	public static String rclinkopenPerm = "rc.linkedopen";
+	public  static String rcfreeCreatePerm = "rc.freecreate";
+	public  static String rcfreeLinkPerm = "rc.freelink";
+	private static String rcunlimitedAmountPerm = "rc.unlimitedamount";
+	public  static String rclinkopenPerm = "rc.linkedopen"; // open linked chests
+	public  static String rccreatelinkPerm = "rc.createlink";
 	private static String rcopenPerm = "rc.open";
 	private static String rccreatePerm = "rc.create";
 	private static String rcremovePerm = "rc.remove";
@@ -49,24 +55,29 @@ public class rcPlugin extends JavaPlugin
 	private static String rcstackPerm = "rc.stack";
 	private static String rcmergePerm = "rc.merge";
 	private static String rclistPerm = "rc.list";
-	static boolean permissionsOn = false;
-	public static PermissionHandler Permissions;
-	
+
 	/**
 	 * iConomy stuff
 	 */
 	static boolean iConomyOn = false;
 	private static iConomy iConomyHandle = null;
-	static int iConChestCreatePrice = 0;
 
-	public static final Logger log = Logger.getLogger("Minecraft");
-	public static String messagePrefix = "[RemoteChests] ";
-	@SuppressWarnings("unused") // Ignore the warning about this variable not being used, as it is used when debugging is uncommented.
-	private static String debugPrefix = "[RemoteChests][Debug] ";
-	private static HashMap<String, InventoryLargeChest> chests = new HashMap<String, InventoryLargeChest>();
+	/**
+	 * Settings
+	 */
+	public static BlockFace signDir = BlockFace.UP;
+	static String tagPlayer = "[player]";
+	static int maxChestsPP = 10;
+	static int iConChestCreatePrice = 0;
+	static int iConChestLinkPrice = 0;
+
+	public  static final Logger log = Logger.getLogger("Minecraft");
+	public  static String messagePrefix = "[RemoteChests] ";
+	public  static HashMap<String, InventoryLargeChest> chests = new HashMap<String, InventoryLargeChest>();
 	private static ArrayList<Sign> signs = new ArrayList<Sign>();
 	private static HashMap<String, String> chestOwners = new HashMap<String, String>();
 	private static HashMap<String, ArrayList<String>> chestAllowed = new HashMap<String, ArrayList<String>>();
+	private static HashMap<String, Integer> numChestsOwned = new HashMap<String, Integer>();
 
 	/**
 	 * Handles all player related events.
@@ -110,17 +121,32 @@ public class rcPlugin extends JavaPlugin
 		setupPermissions();
 		// iConomy support
 		setupiConomy();
-		if(iConomyOn)
-		{
-			fileIO.loadIConomy();
-		}
+		
+		fileIO.removeObsolete();
+		
 		chests = fileIO.loadChests();
 		chestAllowed = fileIO.loadAllowed();
 		chestOwners = fileIO.loadOwners();
+		fileIO.loadSettings();
+		initNumChestsOwned();
 		
 		PluginDescriptionFile pdfFile = this.getDescription();
 		System.out.println( messagePrefix + pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled!" );
 	}
+	private void initNumChestsOwned()
+	{
+		for(String chestName : chestOwners.keySet())
+		{
+			String owner = chestOwners.get(chestName);
+			int numOwned = 0;
+			if(rcPlugin.numChestsOwned.containsKey(owner))
+			{
+				numOwned = numChestsOwned.get(owner);
+			}
+			numChestsOwned.put(owner, numOwned+1);
+		}
+	}
+
 	/**
 	 * Gets called when the plugin is disabled
 	 * (so server stop/reload)
@@ -316,7 +342,7 @@ public class rcPlugin extends JavaPlugin
 		return names;
 	}
 
-	public void setChestOwner(Player sender, String namePart, String chestName)
+	private void setChestOwner(Player sender, String namePart, String chestName)
 	{
 		if(!chests.containsKey(chestName))	
 		{	sender.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist");			return;	}
@@ -337,14 +363,34 @@ public class rcPlugin extends JavaPlugin
 				sender.sendMessage(messagePrefix + ChatColor.RED + "No online players match \"" + namePart + "\"");
 				return;
 			}
-			chestOwners.put(chestName, possPlayers[0].toLowerCase());
-			getServer().getPlayer(possPlayers[0]).sendMessage(messagePrefix + ChatColor.GREEN + "You are now the owner of chest " + chestName);
+			if(chestOwners.containsKey(chestName))
+			{
+				int numOwned = 0;
+				String oldOwner = chestOwners.get(chestName);
+				if(numChestsOwned.containsKey(oldOwner))
+				{
+					numOwned = numChestsOwned.get(oldOwner);
+				}
+				numChestsOwned.put(oldOwner, numOwned);
+			}
+
+			String newOwner = possPlayers[0].toLowerCase();
+			int numOwned = 0;
+			if(numChestsOwned.containsKey(newOwner))
+			{
+				numOwned = numChestsOwned.get(newOwner);
+			}
+			numChestsOwned.put(newOwner, numOwned+1);
+			
+			
+			chestOwners.put(chestName, newOwner);
+			getServer().getPlayer(newOwner).sendMessage(messagePrefix + ChatColor.GREEN + "You are now the owner of chest " + chestName);
 		}
 	}
 	/**
 	 * Set the owner of a chest.
 	 */
-	public void setChestOwner(Player player, String chestName)
+	private void setChestOwner(Player player, String chestName)
 	{
 		chestOwners.put(chestName, player.getName().toLowerCase());
 		player.sendMessage(messagePrefix + ChatColor.GREEN + "You are now the owner of chest " + chestName);
@@ -352,7 +398,7 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Checks if specified player is owner of specified chest.
 	 */
-	public boolean isChestOwner(Player player, String chestName)
+	private boolean isChestOwner(Player player, String chestName)
 	{
 		if(isAdmin(player) || chestOwners.containsKey(chestName) && chestOwners.get(chestName).equalsIgnoreCase(player.getName()))
 			return true;
@@ -371,7 +417,7 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Add a player to the list of allowed openers.
 	 */
-	public void addChestAllowance(Player sender, String namePart, String chestName)
+	private void addChestAllowance(Player sender, String namePart, String chestName)
 	{
 		if(!chests.containsKey(chestName))	
 			{	sender.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist");			return;	}
@@ -410,7 +456,7 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Remove a player from the list of allowed openers.
 	 */
-	public void removeChestAllowance(Player sender, String namePart, String chestName)
+	private void removeChestAllowance(Player sender, String namePart, String chestName)
 	{
 		if(!chests.containsKey(chestName))	
 			{	sender.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist");			return;	}
@@ -442,7 +488,7 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Checks if specified player is allowed to open specified chest.
 	 */
-	public boolean hasChestAllowance(Player player, String chestName)
+	private boolean hasChestAllowance(Player player, String chestName)
 	{
 		if(!chestAllowed.containsKey(chestName))
 		{
@@ -485,20 +531,21 @@ public class rcPlugin extends JavaPlugin
 			{
 				continue;
 			}
-			if(chestOwners.get(name) == name)
+			if((chestOwners.containsKey(name) && chestOwners.get(name).toLowerCase() == player.getName().toLowerCase()) || isAdmin(player))
 				clr = ChatColor.GREEN;
 			else
 			{
-				for(String plrName : (String[])chestAllowed.get(name).toArray(new String[0]))
-				{
-					if(plrName.toLowerCase().equals(player.getName().toLowerCase()))
+				if(chestAllowed.containsKey(name))
+					for(String plrName : (String[])chestAllowed.get(name).toArray(new String[0]))
 					{
-						clr = ChatColor.WHITE;
-						break;
+						if(plrName.toLowerCase().equals(player.getName().toLowerCase()))
+						{
+							clr = ChatColor.WHITE;
+							break;
+						}
+						else
+							clr = ChatColor.RED;
 					}
-					else
-						clr = ChatColor.RED;
-				}
 			}
 			player.sendMessage(clr + name);
 			if(curPos >= startPos + 18)
@@ -515,6 +562,7 @@ public class rcPlugin extends JavaPlugin
 	private boolean sortChest(Player player, String chestName)
 	{
 		if(chestName.equals(""))			{	player.sendMessage(messagePrefix + ChatColor.RED + "Please specify the name of the chest.");			return false;	}
+		chestName = parseTags(chestName, player);
 		if(!chests.containsKey(chestName))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist.");		return false;	}
 		if(!isChestOwner(player, chestName)){	player.sendMessage(messagePrefix + ChatColor.RED + "You are not the owner of \"" + chestName + "\"");	return false;	}
 //		System.out.println( messagePrefix + "Sorting chest \"" + chestName + "\"." );
@@ -570,6 +618,7 @@ public class rcPlugin extends JavaPlugin
 	private boolean stackChest(Player player, String chestName)
 	{
 		if(chestName.equals(""))			{	player.sendMessage(messagePrefix + ChatColor.RED + "Please specify the name of the chest.");			return false;	}
+		chestName = parseTags(chestName, player);
 		if(!chests.containsKey(chestName))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist.");		return false; }
 		if(!isChestOwner(player, chestName)){	player.sendMessage(messagePrefix + ChatColor.RED + "You are not the owner of \"" + chestName + "\"");	return false;	}
 		InventoryLargeChest chest = chests.get(chestName);
@@ -658,8 +707,8 @@ public class rcPlugin extends JavaPlugin
 			dispMergeHelp(player);
 				return false;
 		}
-		name1 = args[0];
-		name2 = args[1];
+		name1 = parseTags(args[0], player);
+		name2 = parseTags(args[1], player);
 		if(!chests.containsKey(name1))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name1 + "\" doesn't exist.");		return false;	}
 		if(!chests.containsKey(name2))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name2 + "\" doesn't exist.");		return false;	}
 		
@@ -680,7 +729,7 @@ public class rcPlugin extends JavaPlugin
 		
 		if(args.length > 2 && !args[2].equals(""))
 		{
-			newName = args[2];
+			newName = parseTags(args[2], player);
 			if(newName != name1 && newName != name2 && chests.containsKey(newName))
 			{
 				player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + newName + "\" already exists.");
@@ -819,46 +868,22 @@ public class rcPlugin extends JavaPlugin
 		return true;
 	}
 	/**
-	 * Checks if a sign contains a chestname tag, and returns the name if it does.
-	 */
-	public String getSignName(String[] lines)
-	{
-		String name = "";
-		for(int i = 0; i < 3 && name.equals(""); i++)
-		{
-			if (lines[i].contains(" "))
-			{
-				String[] split = lines[i].split(" ");
-				if(split[0].equalsIgnoreCase("[rc]"))
-					name = split[1];
-			}
-			else if(lines[i].equalsIgnoreCase("[rc]"))
-			{
-				if(lines[i+1].length() > 1)
-					// ignore everything after spaces
-					name = lines[i+1].split(" ")[0];
-			}
-		}
-		if(name.equals(""))
-			debugPrint("No sign name specified");
-		return name;
-	}
-	/**
 	 * Removes a chest.
 	 */
-	public void removeChest(Player player, String name)
+	private void removeChest(Player player, String chestName)
 	{
-		if(name.equals(""))				{	player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a chest name");					return;	}
-		if(!chests.containsKey(name))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name + "\" doesn't exist.");		return;	}
-		if(!isChestOwner(player, name))	{	player.sendMessage(messagePrefix + ChatColor.RED + "You are not the owner of \"" + name + "\"");	return;	}
+		if(chestName.equals(""))				{	player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a chest name");					return;	}
+		chestName = parseTags(chestName, player);
+		if(!chests.containsKey(chestName))		{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" doesn't exist.");		return;	}
+		if(!isChestOwner(player, chestName))	{	player.sendMessage(messagePrefix + ChatColor.RED + "You are not the owner of \"" + chestName + "\"");	return;	}
 		
-		chests.remove(name);
-		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + name + "\" succesfully removed.");
+		chests.remove(chestName);
+		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + chestName + "\" succesfully removed.");
 	}
 	/**
 	 * Renames a chest
 	 */
-	public void renameChest(Player player, String[] args)
+	private void renameChest(Player player, String[] args)
 	{
 		if(args.length < 1 || args[0].equals(""))
 		{
@@ -869,8 +894,8 @@ public class rcPlugin extends JavaPlugin
 		}
 		if(args.length < 2 || args[1].equals(""))
 		{	player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a target chest name");				return;	}
-		String oldName = args[0];
-		String newName = args[1];
+		String oldName = parseTags(args[0], player);
+		String newName = parseTags(args[1], player);
 		if(!chests.containsKey(oldName))	{	player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + oldName + "\" doesn't exist");		 	return;	}
 		if(!isChestOwner(player, oldName))	{	player.sendMessage(messagePrefix + ChatColor.RED + "You are not the owner of \"" + oldName + "\"");		return;	}
 		if(chests.containsKey(newName))		{	player.sendMessage(messagePrefix + ChatColor.RED + "Target name: \"" + newName + "\" already exist");	return;	}
@@ -885,79 +910,87 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Creates a chest with the specified name, used for the rcCreate command.
 	 */
-	public boolean createChest(Player player, String name)
+	public boolean createChest(Player player, String chestName)
 	{
+		if(permissionsOn && !rcPlugin.Permissions.has(player, rccreatePerm))
+			player.sendMessage(messagePrefix + ChatColor.RED + "You do not have permission create chests.");
 		debugPrint("Creating Chest");
-		if(name.equals(""))
+		chestName = parseTags(chestName, player);
+		if(chestName.equals(""))
 		{
 			player.sendMessage(messagePrefix + ChatColor.RED + "Please specify a chest name");
 			return false;
 		}
-		if(chests.containsKey(name))
+		if(chests.containsKey(chestName))
 		{
-			player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + name + "\" already exists.");
+			player.sendMessage(messagePrefix + ChatColor.RED + "Chest \"" + chestName + "\" already exists.");
+			return false;
+		}
+		if(numChestsOwned.containsKey(player.getName().toLowerCase()) && numChestsOwned.get(player.getName().toLowerCase()) > rcPlugin.maxChestsPP && 
+				!(permissionsOn && rcPlugin.Permissions.has(player, rcunlimitedAmountPerm)))
+		{
+			player.sendMessage(messagePrefix + ChatColor.RED + "You already own too many chests, max = " + rcPlugin.maxChestsPP);
 			return false;
 		}
 		if(iConomyOn)
 		{
-			Account iConAccount = iConomy.getBank().getAccount(player.getName());
-			if(!(iConAccount.getBalance() >= iConChestCreatePrice))
+			boolean chestIsFree = (rcPlugin.permissionsOn && rcPlugin.Permissions.has(player, rcPlugin.rcfreeCreatePerm));
+			if(!chestIsFree)
 			{
-				player.sendMessage(messagePrefix + ChatColor.RED + "Your bank balance is too low to create a chest");
-				player.sendMessage(messagePrefix + ChatColor.RED + "You need " + iConomy.getBank().format(iConChestCreatePrice) + ", you have " + iConomy.getBank().format(iConAccount.getBalance()));
-				return false;
-			}
-			else
-			{
-				iConAccount.subtract(iConChestCreatePrice);
-				player.sendMessage(messagePrefix + ChatColor.GREEN + "Subtracted " + iConomy.getBank().format(iConChestCreatePrice) + " from your account");
+				Account iConAccount = iConomy.getBank().getAccount(player.getName());
+				if(!(iConAccount.getBalance() >= iConChestCreatePrice))
+				{
+					player.sendMessage(messagePrefix + ChatColor.RED + "Your bank balance is too low to create a chest");
+					player.sendMessage(messagePrefix + ChatColor.RED + "You need " + iConomy.getBank().format(iConChestCreatePrice) + ", you have " + iConomy.getBank().format(iConAccount.getBalance()));
+					return false;
+				}
+				else
+				{
+					iConAccount.subtract(iConChestCreatePrice);
+					player.sendMessage(messagePrefix + ChatColor.GREEN + "Creating the chest cost you " + iConomy.getBank().format(iConChestCreatePrice));
+				}
 			}
 		}
 		// Create the chest
-		chests.put(name, new InventoryLargeChest(name, new rcChest(), new rcChest()));
+		chests.put(chestName, new InventoryLargeChest(chestName, new rcChest(), new rcChest()));
 		
-		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + name + "\" succesfully created.");
-		setChestOwner(player, name);
-		openChest(player, name);
+		player.sendMessage(messagePrefix + ChatColor.GREEN + "Chest \"" + chestName + "\" succesfully created.");
+		setChestOwner(player, chestName);
+		openChest(player, chestName);
 		return true;
 	}
 	/**
 	 * Adds a chest at the specified location, used when placing signs.
 	 * Transfers all items from the existing chest to the new chest.
 	 */
-	public void addChest(String name, Player player, Location location)
+	public boolean addChest( Player player, String chestName, Location location)
 	{
 		debugPrint("Adding Chest");
-		Block block = location.getBlock().getRelative(BlockFace.DOWN);
+		Block block = location.getBlock().getRelative(signDir.getOppositeFace());
+		chestName = parseTags(chestName, player);
 		if(!(block.getState() instanceof Chest))
 		{
 			player.sendMessage(messagePrefix + ChatColor.RED + "Sign not placed above chest, try again.");
-			if(location.getBlock().getState() instanceof Sign)
-			{
-				Sign sign = (Sign)location.getBlock().getState();
-				String error = "ERROR";
-				for(int i = 0; i < 4; i++)
-					sign.setLine(i, error);
-				sign.update();
-				removeSign(sign);
-			}
-			return;
+			return false;
 		}
-		if(chests.containsKey(name))
+		if(chests.containsKey(chestName))
 		{
-			transferItems((Chest)block.getState(), chests.get(name));
-			player.sendMessage(messagePrefix + ChatColor.GREEN + "Linked to chest \"" + name + "\".");
-			return;
+			transferItems((Chest)block.getState(), chests.get(chestName));
+			player.sendMessage(messagePrefix + ChatColor.GREEN + "Linked to chest \"" + chestName + "\".");
+			return true;
 		}
-		if(createChest(player, name))
+		if(createChest(player, chestName))
 		{
-			transferItems((Chest)block.getState(), chests.get(name));
+			transferItems((Chest)block.getState(), chests.get(chestName));
+			return true;
 		}
+		else
+			return false;
 	}
 	/**
 	 * Transfers the items from a chest to a virtual chest.
 	 */
-	public void transferItems(Chest chest, InventoryLargeChest lrgchest)
+	private void transferItems(Chest chest, InventoryLargeChest lrgchest)
 	{
 		boolean full = false;
 		for (int index = 0; index < 27; index++)
@@ -1017,7 +1050,7 @@ public class rcPlugin extends JavaPlugin
 	/**
 	 * Opens a chest without suppressing warning when new chest should be created.
 	 */
-	public boolean openChest(Player player, String chestName)
+	private boolean openChest(Player player, String chestName)
 	{	return openChest(player, chestName, false);	}
 	/**
 	 * Opens a chest.
@@ -1026,6 +1059,7 @@ public class rcPlugin extends JavaPlugin
 	public boolean openChest(Player player, String chestName, boolean supressWarning)
 	{
 		debugPrint(player.getName() + " is trying to open chest \"" + chestName + "\".");
+		chestName = parseTags(chestName, player);
 		if(!(chests.containsKey(chestName)))
 		{
 			if(!supressWarning)
@@ -1052,10 +1086,44 @@ public class rcPlugin extends JavaPlugin
 		return true;
 	}
 
+	/**
+	 * Parses all tags such as [player]
+	 */
+	public static String parseTags(String chestName, Player player)
+	{
+		chestName = chestName.replace(rcPlugin.tagPlayer, player.getName());
+		return chestName;
+	}
+	/**
+	 * Checks if a sign contains a chest name, and returns the name if it does.
+	 */
+	public String getSignName(String[] lines)
+	{
+		String name = "";
+		for(int i = 0; i < 3 && name.equals(""); i++)
+		{
+			if (lines[i].contains(" "))
+			{
+				String[] split = lines[i].split(" ");
+				if(split[0].equalsIgnoreCase("[rc]"))
+					name = split[1];
+			}
+			else if(lines[i].equalsIgnoreCase("[rc]"))
+			{
+				if(lines[i+1].length() > 0)
+					// ignore everything after spaces
+					name = lines[i+1].split(" ")[0];
+			}
+		}
+		if(name.equals(""))
+			debugPrint("No sign name specified");
+		return name;
+	}
+
 	public void debugPrint(String msg)
 	{
-//		getServer().broadcastMessage(messagePrefix + msg);
-//		log.info(debugPrefix + msg);
+	//	getServer().broadcastMessage(messagePrefix + msg);
+	//	log.info(messagePrefix + msg);
 	}
 
 	/**
@@ -1116,7 +1184,7 @@ public class rcPlugin extends JavaPlugin
 		}
 		return amount;
 	}
-	
+
 	/**
 	 * Set up the permissions system
 	 */

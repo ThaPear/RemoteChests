@@ -2,7 +2,6 @@ package rc.rc.ThaPear.RemoteChests;
 
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -22,7 +21,7 @@ public class rcPlayerListener extends PlayerListener
 	{
 		if(event.getAction().toString() != "RIGHT_CLICK_BLOCK" || event.getClickedBlock() == null || !(event.getClickedBlock().getState() instanceof Chest))
 		{	return;		}
-		Block block = event.getClickedBlock().getRelative(BlockFace.UP);
+		Block block = event.getClickedBlock().getRelative(rcPlugin.signDir);
 		if(block.getState() instanceof Sign)
 		{
 			String signName = plugin.getSignName( ((Sign) block.getState()).getLines() );
