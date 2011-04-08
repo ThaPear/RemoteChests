@@ -7,6 +7,14 @@ If the target chest does not exist, it will be created.
 Any items in the original chest block will be transferred to the remote chest. (When linking and when creating)
 If there are so many items in the chest block that they do not fit into the remote chest, they will be dropped.
 
+Possible settings:
+signlocation:up - The location relative to the chest that the sign needs to be (up/down/north/east/south/west)
+tagplayer:[player] - The tag that will be replaced by the player's name
+maxchestsperplayer:10 - The maximum amount of chests a player can own
+chestcreateprice:0 - The iConomy cost for creating a chest
+chestlinkprice:0 - The iConomy cost for linking to a chest (using a sign)
+
+
 Commands, [arg] = Optional argument:
 
 These commands can be used at all times
@@ -39,6 +47,9 @@ SS - Auto-stack contents before & after merging
 Permissions:
 Open Linked chests = "rc.linkedopen"
 Admin = "rc.admin"
+Free chest creation = "rc.freecreate"
+Free chest linking = "rc.freelink"
+Unlimited amount of chests = "rc.unlimitedamount"
 Command = "permission.node"
 /rcopen = "rc.open"
 /rccreate = "rc.create"
@@ -49,11 +60,13 @@ Command = "permission.node"
 /rcmerge = "rc.merge"
 /rclist =  "rc.list"
 
-iConomy:
-Run the plugin once, it will generate iconomy.txt (if iConomy is installed)
-In there you can change the price for creating a chest.
-
 Changelog:
+Version 1.4
+- Added cost for sign linking
+- Added free chest/sign linking permission
+- Added sign location setting
+- Added limit to amount of chests a player can own, and permission for unlimited
+- Added cost to sign linking
 Version 1.3
 - Added allow/owner system.
 Version 1.2:
