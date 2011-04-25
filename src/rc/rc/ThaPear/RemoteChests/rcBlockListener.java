@@ -23,7 +23,7 @@ public class rcBlockListener extends BlockListener
 	{
 		Player player = event.getPlayer();
 
-		String chestName = plugin.getSignName(event.getLines());
+		String chestName = rcPlugin.getSignName(event.getLines());
 		if(!chestName.equals(""))
 		{
 			chestName = rcPlugin.parseTags(chestName, player);
@@ -31,8 +31,8 @@ public class rcBlockListener extends BlockListener
 			{
 				if(rcPlugin.iConomyOn)
 				{
-					boolean linkIsFree = (rcPlugin.permissionsOn && rcPlugin.Permissions.has(player, rcPlugin.rcfreeLinkPerm));
-					boolean chestIsFree = (rcPlugin.permissionsOn && rcPlugin.Permissions.has(player, rcPlugin.rcfreeCreatePerm));
+					boolean linkIsFree = (rcPlugin.permissionsOn && rcPlugin.Permissions.has(player, "rc.freelink"));
+					boolean chestIsFree = (rcPlugin.permissionsOn && rcPlugin.Permissions.has(player, "rc.freecreate"));
 					Account iConAccount = iConomy.getBank().getAccount(player.getName());
 					int cost = 0;
 					if(!linkIsFree)
@@ -41,7 +41,7 @@ public class rcBlockListener extends BlockListener
 						cost += rcPlugin.iConChestCreatePrice;
 					if(!(iConAccount.getBalance() >= cost))
 					{
-						player.sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "Your bank balance is too low to link to this chest");
+						player.sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "Your do not have enough " + iConomy.getBank().getCurrency() + " to link to this chest");
 						player.sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "You need " + iConomy.getBank().format(cost) + ", you have " + iConomy.getBank().format(iConAccount.getBalance()));
 						event.setCancelled(true);
 					}

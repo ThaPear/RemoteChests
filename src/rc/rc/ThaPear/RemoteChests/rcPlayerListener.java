@@ -24,13 +24,14 @@ public class rcPlayerListener extends PlayerListener
 		Block block = event.getClickedBlock().getRelative(rcPlugin.signDir);
 		if(block.getState() instanceof Sign)
 		{
-			String signName = plugin.getSignName( ((Sign) block.getState()).getLines() );
+			String signName = rcPlugin.getSignName( ((Sign) block.getState()).getLines() );
 			if(!signName.equals(""))
 			{
+				String[] Targs = {signName};
 				if(rcPlugin.permissionsOn && !rcPlugin.Permissions.has(event.getPlayer(), rcPlugin.rclinkopenPerm))
 					event.getPlayer().sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "You do not have permission to open this.");
-				else if(!plugin.openChest( event.getPlayer(), signName, true))
-					plugin.createChest(event.getPlayer(), signName);
+				else if(!plugin.openChest( event.getPlayer(), Targs, true))
+					event.getPlayer().sendMessage(rcPlugin.messagePrefix + ChatColor.RED + "Chest \"" + signName + "\" doesn't exist, please create it.");
 				event.setCancelled(true);
 			}
 		}

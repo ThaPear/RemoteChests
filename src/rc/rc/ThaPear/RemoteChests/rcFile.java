@@ -42,8 +42,9 @@ public class rcFile
 				try						{	file.createNewFile();	}
 				// If it fails, print why.
 				catch (IOException ex)	{	ex.printStackTrace();		}
-				// No need to try to read chests from an empty file, so return empty hashmap.
 				System.out.println(rcPlugin.messagePrefix + file.getName() + " not found, creating it." );
+				// No need to try to read stuff from an empty file, so return empty string[].
+				return lines;
 			}
 	
 			ArrayList<String> listLines = new ArrayList<String>();
@@ -112,7 +113,7 @@ public class rcFile
 	public void loadSettings()
 	{
 		String[] lines = loadFile(SettingsFile);
-		if(lines.length < 6 || !lines[0].contains(":") || !lines[1].contains(":") || !lines[2].contains(":") || !lines[3].contains(":") || !lines[4].contains(":"))
+		if(lines.length < 2)
 		{
 			System.out.println(rcPlugin.messagePrefix + "Settings file corrupt, backing up and recreating");
 			revertSettings();
@@ -124,28 +125,68 @@ public class rcFile
 		blockFaces.put("north", BlockFace.NORTH);	blockFaces.put("east", BlockFace.EAST);
 		blockFaces.put("south", BlockFace.SOUTH);	blockFaces.put("west", BlockFace.WEST);
 		
-		String signDirS = lines[0].split(":")[1].toLowerCase();
-		if(!blockFaces.containsKey(signDirS))
+		int numLoaded = 0;
+		for(int i = 0; i < lines.length; i++)
 		{
-			System.out.println(rcPlugin.messagePrefix + "Invalid signdir specified, valid dirs:");
-			System.out.println(rcPlugin.messagePrefix + "up, down, north, east, south, west");
-			revertSettings();
-			return;
+			String line = lines[i];
+			if(line == null || line.length() < 1 || line.contains("//"))
+				continue;
+			if(line.contains(" "))
+			{
+				System.out.println(rcPlugin.messagePrefix + "Please do not use spaces outside comments in the settings file.");
+				continue;
+			}
+
+			if(line.contains("signlocation:"))
+			{
+				String signDirS = line.split(":")[1].toLowerCase();
+				if(!blockFaces.containsKey(signDirS))
+				{
+					System.out.println(rcPlugin.messagePrefix + "Invalid signdir specified, valid dirs:");
+					System.out.println(rcPlugin.messagePrefix + "up, down, north, east, south, west");
+					continue;
+				}
+				System.out.println(rcPlugin.messagePrefix + "Loaded sign location.");
+				numLoaded++;
+				rcPlugin.signDir = blockFaces.get(signDirS);
+				continue;
+			}
+			if(line.contains("playerTag:"))
+			{
+				String tag = line.split(":")[1];
+				if(tag.length() < 1)
+				{
+					System.out.println(rcPlugin.messagePrefix + "Invalid player tag specified.");
+					continue;
+				}
+				System.out.println(rcPlugin.messagePrefix + "Loaded player tag.");
+				numLoaded++;
+				rcPlugin.tagPlayer = tag;
+				continue;
+			}
+			if(line.contains("maxchestsperplayer:"))
+			{
+				System.out.println(rcPlugin.messagePrefix + "Loaded max chests.");
+				numLoaded++;
+				rcPlugin.maxChestsPP = Integer.parseInt(line.split(":")[1]);
+				continue;
+			}
+			if(line.contains("iConomy:"))
+			{
+				String[] split = line.split(":");
+				if(split.length < 3)
+				{
+					System.out.println(rcPlugin.messagePrefix + "Please specify iConomy prices as: iConomy:<command>:<price>");
+					System.out.println(rcPlugin.messagePrefix + "Example: iConomy:create:100");
+					continue;
+				}
+				System.out.println(rcPlugin.messagePrefix + "Loaded " + split[1] + " price: " + Double.parseDouble(split[2]) + ".");
+				numLoaded++;
+				rcPlugin.iConomyCosts.put(split[1], Double.parseDouble(split[2]));
+				continue;
+			}
 		}
-		
-		rcPlugin.signDir = blockFaces.get(signDirS);
-		String tagPlayer = lines[1].split(":")[1];
-		if(tagPlayer.length() < 1)
-		{
-			System.out.println(rcPlugin.messagePrefix + "Invalid player tag specified.");
-			revertSettings();
-			return;
-		}
-		rcPlugin.tagPlayer = tagPlayer;
-		rcPlugin.maxChestsPP = Integer.parseInt(lines[2].split(":")[1]);
-		rcPlugin.iConChestCreatePrice = Integer.parseInt(lines[3].split(":")[1]);
-		rcPlugin.iConChestLinkPrice = Integer.parseInt(lines[4].split(":")[1]);
-		
+		System.out.println(rcPlugin.messagePrefix + "Loaded " + numLoaded + " settings.");
 	}
 	private void revertSettings()
 	{
@@ -156,7 +197,18 @@ public class rcFile
 	}
 	private void printDefaultSettings()
 	{
-		String[] lines = {"signlocation:up", "tagplayer:[player]", "maxchestsperplayer:10", "chestcreateprice:0", "chestlinkprice:0"};
+		String[] lines = {
+				"//Location of sign relative to the chest, up, down, north, east, south or west",
+				"signlocation:up",
+				"//The tag which is to be replaced by a player's name",
+				"playerTag:[player]",
+				"//Max amount of chests per player, admins ignore this",
+				"maxchestsperplayer:10",
+				"//iConomy pricing, price per command is specified with:",
+				"//iConomy:<command>:<price>",
+				"iConomy:link:0",
+				"iConomy:create:0"
+				};
 		saveFile(SettingsFile, lines);
 	}
 	/**
@@ -274,7 +326,7 @@ public class rcFile
 					if(id != 0 && amount != 0)
 					{
 						//System.out.println(rcPlugin.messagePrefix + "sids[" + j + "] = " + ids[j] + ", amounts[" + j + "] = " + amounts[j] + "."  );
-						lrgchest.a(j, new ItemStack(id, amount, 0));
+						lrgchest.setItem(j, new ItemStack(id, amount, 0));
 					}
 				}
 			}
